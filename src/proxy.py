@@ -20,19 +20,23 @@ class Proxy:
 
     @staticmethod
     def __communicate(self, host, conn, requests):
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((host, 80))
-        s.send(requests)
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.connect((host, 80))
+            s.send(requests)
 
-        while True:
-            data = s.recv(self.MAX_DATA)
-            print(data)
-            if (len(data) > 0):
-                conn.sendall(data)
-            else:
-                break
+            while True:
+                data = s.recv(self.MAX_DATA)
+                #print(data)
+                if (len(data) > 0):
+                    conn.sendall(data)
+                else:
+                    break
 
-        s.close()
+            s.close()
+        except TimeoutError:
+            s.close()
+        
 
     @staticmethod
     def __client_thread(self, conn, addr):
@@ -40,7 +44,7 @@ class Proxy:
         url = self.parse_url(requests.decode('ASCII'))
         # LOG to file to see what happened
         print('URL: ', url)
-        print(requests)
+        #print(requests)
         # Get server ip
         webserver = socket.gethostbyname(url)
         self.__communicate(self, webserver, conn, requests)
@@ -49,12 +53,31 @@ class Proxy:
 
     def parse_url(self, requests):
         first_line = requests.split('\n')[0]
-        attrs = first_line.split(' ')
+        url = first_line.split(' ')[1]
+        http_pos = url.find("://")
+        if (http_pos == -1):
+            temp = url
+        else:
+            temp = url[(http_pos + 3):]
+        port_pos = temp.find(":")
+        webserver_pos = temp.find("/")
+        if (webserver_pos == -1):
+            webserver_pos = len(temp)
+        webserver = ""
+        if (port_pos == -1 or webserver_pos < port_pos):
+            webserver = temp[:webserver_pos]
+        else:
+            webserver = temp[:port_pos]
 
-        if (len(attrs) >= 1):
-            url = attrs[1]
+        return webserver
 
-        return url.split('/')[2]
+        # attrs = first_line.split(' ')
+        # print(len(attrs))
+        # if (len(attrs) >= 1):
+        #     url = attrs[1]
+        #     return attrs[1].split('/')[2]
+
+        # return attrs[0]#.split('/')[2]
 
     def start(self):
         self.server.bind((self.host, self.port))
@@ -65,7 +88,7 @@ class Proxy:
             _thread.start_new_thread(self.__client_thread, (self, conn, addr))
 
     def close(self):
-        sefl.server.close()
+        self.server.close()
 
     
 
