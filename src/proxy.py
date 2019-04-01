@@ -65,7 +65,7 @@ class Proxy:
             _thread.start_new_thread(self.__client_thread, (self, conn, addr))
 
     def close(self):
-        sefl.server.close()
+        self.server.close()
 
     
 
